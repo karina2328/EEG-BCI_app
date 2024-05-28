@@ -11,6 +11,7 @@ from kivy.uix.popup import Popup
 from channels_ch import ChannelSelectionPopup
 from connection import ConnectionPopup
 from impedance import ImpdPopup
+from commands import CmdPopup
 from dinamic_grafs import DGraph
 import kivy
 from kivy.core.window import Window
@@ -26,6 +27,7 @@ kivy.config.Config.set('graphics', 'resizable', False)
 class EEGApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.title = 'EEG_BCI'
         self.channels = 16  # количество каналов записи
         self.is_recording = False
         self.edf_writer = None
@@ -33,7 +35,8 @@ class EEGApp(MDApp):
         self.eeg_data = []
         self.demo_play = False
         self.bl_popup = None
-        self.icon = 'ic_2.png'
+        self.hand_or_amp = None
+        self.icon = 'main_icon.png'
         Config.set('graphics', 'resizable', False)
         if platform == 'android':
             Window.maximize()
@@ -61,13 +64,13 @@ class EEGApp(MDApp):
                                              text_color=[.184, .192, .251, 1]),
                                 style="elevated",
                                 theme_width="Custom",
-                                on_press=self.show_bluetooth_devices)
+                                on_press=self.show_ble_devices_amp)
         self.btn_hand = MDButton(MDButtonText(text='Поиск протеза',
                                               pos_hint={'center_x': 0.5, 'center_y':0.5},
                                               theme_text_color="Custom",
                                               text_color=[.184, .192, .251, 1]),
                                  theme_width="Custom",
-                                 on_press=self.show_bluetooth_devices_hand)
+                                 on_press=self.show_ble_devices_hand)
         self.btn_4 = MDButton(MDButtonText(text='Выбор каналов',
                                            pos_hint={'center_x': 0.5, 'center_y': 0.5},
                                            theme_text_color="Custom",
@@ -88,7 +91,7 @@ class EEGApp(MDApp):
                                              theme_text_color="Custom",
                                              text_color=[.184, .192, .251, 1]),
                                 theme_width="Custom",
-                                on_press=self.on_record)
+                                on_press=self.send_commands)
         self.btn_impd = MDButton(MDButtonText(text='Импеданс',
                                               pos_hint={'center_x': 0.5, 'center_y': 0.5},
                                               theme_text_color="Custom",
@@ -116,9 +119,17 @@ class EEGApp(MDApp):
         self.layout.add_widget(self.buttons)
         return self.layout
 
-    def show_bluetooth_devices(self, instance):
+    def show_ble_devices_amp(self, instance):
+        self.hand_or_amp = 'amp'
+        self.show_bluetooth_devices('amp')
+
+    def show_ble_devices_hand(self, instance):
+        self.hand_or_amp = 'hand'
+        self.show_bluetooth_devices('hand')
+
+    def show_bluetooth_devices(self, d_type):
         try:
-            self.bl_popup = ConnectionPopup(size_hint=(.85, .85), auto_dismiss=False, device_type='amp')
+            self.bl_popup = ConnectionPopup(size_hint=(.85, .85), auto_dismiss=False, device_type=d_type)
             self.bl_popup.open()
 
         except OSError:
@@ -126,7 +137,7 @@ class EEGApp(MDApp):
             return
 
     def start_eeg(self, instance):
-        if self.bl_popup.selected_amp_name is not None and (not self.demo_play):
+        if self.bl_popup and (not self.demo_play):
             self.layout.remove_widget(self.graph_layout)
             graph_layout1 = DGraph(orientation='vertical')
             self.layout.add_widget(graph_layout1)
@@ -156,11 +167,9 @@ class EEGApp(MDApp):
                                  font_size=20)
         cntnt.add_widget(popup_close_btn)
 
-    def show_bluetooth_devices_hand(self, instance):
-        pass
 
     def on_record(self, instance):
-        if self.bl_popup.selected_amp_name is not None:
+        if self.bl_popup:
             if not self.is_recording:
                 self.is_recording = True
                 self.btn_record._button_text.text = 'Стоп'
@@ -193,7 +202,7 @@ class EEGApp(MDApp):
                 self.file.write(str(data)+'\n')
 
     def set_4(self, instance):
-        if self.bl_popup.selected_amp_name is not None:
+        if self.bl_popup:
             channel_selection_popup = ChannelSelectionPopup(
                 channels=["Канал " + i for i in self.names_of_channels])  # + str(i) for i in range(1, 17)])
             channel_selection_popup.open()
@@ -201,12 +210,18 @@ class EEGApp(MDApp):
             self.notconnect()
 
     def show_impd(self, instance):
-        if self.bl_popup.selected_amp_name is not None:
+        if self.bl_popup:
             impdp = ImpdPopup()
             impdp.open()
         else:
             self.notconnect()
 
+    def send_commands(self, instance):
+        if self.bl_popup and self.hand_or_amp=='hand':
+            cmd = CmdPopup()
+            cmd.open()
+        else:
+            self.notconnect()
     # функция отключения усилителя при закрытии приложения
     def on_stop(self):
         if ConnectionPopup.amp:
