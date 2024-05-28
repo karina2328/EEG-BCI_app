@@ -4,6 +4,7 @@ from kivymd.uix.gridlayout import MDGridLayout
 from kivy.uix.popup import Popup
 from kivymd.uix.button import *
 from connection import ConnectionPopup
+import asyncio
 
 class CmdPopup(Popup):
     def __init__(self, **kwargs):
