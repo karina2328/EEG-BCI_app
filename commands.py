@@ -68,8 +68,7 @@ class CmdPopup(Popup):
         self.cmd_for_hand = 'c2c25050ff'
         self.send_cmd(self.cmd_for_hand)
     def send_cmd(self,cmd):
-        pass
-      #asyncio.run(send_cmd_to_hand(self.cmd_for_hand)
+        asyncio.run(send_cmd_to_hand(self.cmd_for_hand)
 
     async def send_cmd_to_hand(self, cmd):
         async with bleak.BleakClient(ConnectionPopup.selected_device) as client:
